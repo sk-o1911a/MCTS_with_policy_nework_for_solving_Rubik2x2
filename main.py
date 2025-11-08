@@ -90,7 +90,7 @@ def main():
         if len(recent_solve_rates) == 5:
             avg_solve = sum(recent_solve_rates) / 5.0
             print(f"[main] avg_solve(last 5) = {avg_solve * 100:.1f}%")
-            if avg_solve >= SOLVE_THRESHOLD and SCRAMBLE_LEN < 20:
+            if avg_solve >= SOLVE_THRESHOLD and SCRAMBLE_LEN < 10:
                 SCRAMBLE_LEN += 1
                 recent_solve_rates.clear()
                 print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")

@@ -51,7 +51,9 @@ Input (144)
     ↓
 FC(512) + LayerNorm + ReLU
     ↓
-FC(256) + LayerNorm + ReLU
+FC(1024) + LayerNorm + ReLU
+    ↓
+FC(512) + LayerNorm + ReLU
     ↓
 FC(128) + LayerNorm + ReLU
     ↓
@@ -73,16 +75,16 @@ The agent uses curriculum learning with progressive difficulty:
 1. Start with 1-move scrambles
 2. Generate episodes using MCTS + neural network
 3. Train network on self-play data (policy + value loss)
-4. When solve rate exceeds 70% for 2 consecutive iterations, increase scramble length
+4. When solve rate exceeds 90% for 5 consecutive iterations, increase scramble length
 5. Repeat until reaching target difficulty (10+ moves)
 
 **Hyperparameters:**
-- Episodes per iteration: 50
-- MCTS simulations: 200-400 (scales with difficulty)
-- Training epochs: 5
+- Episodes per iteration: 70
+- MCTS simulations: 300-500 (scales with difficulty)
+- Training epochs: 7
 - Batch size: 256
-- Learning rate: 2e-4
-- Exploration constant (c_puct): 1.5
+- Learning rate: 1e-4
+- Exploration constant (c_puct): flexible based on scramble length from 1.0 to 0.3
 
 ## Installation
 
@@ -159,44 +161,83 @@ python PyGame.py
 
 The agent successfully learns to solve increasingly complex scrambles through self-play:
 
-- **1-3 moves**: ~95%+ solve rate with 200 simulations
-- **4-6 moves**: ~80%+ solve rate with 300 simulations
-- **7-10 moves**: ~60%+ solve rate with 400 simulations
+
+| Scramble Length | Solve Rate | MCTS Simulations | Temperature |
+|-----------------|------------|------------------|-------------|
+| 1-3 moves       | ~98%+      | 300              | 1.0         |
+| 4-6 moves       | ~92%+      | 400              | 0.7-1.0     |
+| 7-10 moves      | ~85%+      | 500              | 0.3-0.7     |
+
 
 The learned policy demonstrates intelligent move sequences and avoids redundant actions through action masking.
 
 ## Algorithm Highlights
 
-### Action Masking
-Prevents the agent from making inverse moves (e.g., R followed by R'), reducing the effective branching factor and improving search efficiency.
+### Enhanced Action Masking
 
-### Self-Play Loop
+Two-layer masking system for efficient search:
+
+1. **Inverse Move Prevention**: Blocks immediately undoing the last move (e.g., R → R' blocked)
+2. **Repetition Limit**: Prevents rotating the same face more than 2 consecutive times (e.g., U → U → U blocked)
+
 ```python
-for iteration in range(NUM_ITERS):
-    # 1. Generate episodes
-    dataset = generate_self_play_data(model, MCTS)
+def _legal_action_mask(self):
+    mask = np.ones(12, dtype=bool)
     
-    # 2. Train network
-    model = train_on_data(dataset)
+    # Block inverse of last action
+    if self._last_action is not None:
+        mask[self._last_action ^ 1] = False
     
-    # 3. Evaluate & adjust difficulty
-    if solve_rate > threshold:
-        scramble_len += 1
+    # Block same face after 2 consecutive rotations
+    if self._last_face_count >= 2:
+        mask[self._last_face * 2] = False      # CW
+        mask[self._last_face * 2 + 1] = False  # CCW
+    
+    return mask
 ```
 
+### Self-Play Loop with Curriculum Learning
+
+```python
+SCRAMBLE_LEN = 1
+recent_solve_rates = []
+
+for iteration in range(NUM_ITERS):
+    # 1. Adjust MCTS simulations based on difficulty
+    if SCRAMBLE_LEN <= 3:
+        SIMULATIONS = 300
+    elif SCRAMBLE_LEN <= 6:
+        SIMULATIONS = 400
+    else:
+        SIMULATIONS = 500
+    
+    # 2. Adjust temperature based on difficulty
+    temperature = get_temperature(SCRAMBLE_LEN)
+    
+    # 3. Generate episodes with adaptive parameters
+    dataset, solve_rate = generate_self_play_data(
+        model, MCTS, SIMULATIONS, temperature
+    )
+    
+    # 4. Train network
+    model = train_on_data(dataset)
+    
+    # 5. Track and evaluate performance
+    recent_solve_rates.append(solve_rate)
+    
+    # 6. Adjust difficulty when agent masters current level
+    if avg(recent_solve_rates[-5:]) > 0.90:
+        SCRAMBLE_LEN += 1
+        recent_solve_rates.clear()
+```
 ### Loss Function
 ```
 Total Loss = MSE(value, target_value) + CrossEntropy(policy, target_policy)
 ```
 
-## Future Improvements
-
-- Implement value network bootstrapping for longer horizons
-- Add experience replay buffer for more stable training
-- Experiment with larger network architectures (ResNets, Transformers)
-- Extend to 3×3 Rubik's Cube
-- Implement parallel MCTS for faster training
-- Add model-based planning with learned dynamics
+Where:
+- **Value Loss**: Measures accuracy of position evaluation
+- **Policy Loss**: Measures alignment between MCTS visit distribution and policy outpu
 
 ## References
 
