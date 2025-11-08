@@ -290,6 +290,8 @@ class Rubik2x2Env(gym.Env):
         self.cube = solved_cube()
         self.steps = 0
         self._last_action: int | None = None
+        self._last_face: int | None = None
+        self._last_face_count: int = 0
 
     # inverse action by use bitwise XOR 1
     @staticmethod
@@ -303,6 +305,16 @@ class Rubik2x2Env(gym.Env):
             inv = self._inverse_move_idx(self._last_action)
             if 0 <= inv < self.action_space.n:
                 mask[inv] = False
+
+        if self._last_face is not None and self._last_face_count >= 2:
+            f = self._last_face
+            face_a = f * 2
+            face_b = f * 2 + 1
+            if 0 <= face_a < self.action_space.n:
+                mask[face_a] = False
+            if 0 <= face_b < self.action_space.n:
+                mask[face_b] = False
+
         return mask
 
 
@@ -312,6 +324,9 @@ class Rubik2x2Env(gym.Env):
         self.cube = scramble(self.cube, k=self.scramble_len)
         self.steps = 0
         self._last_action = None
+        self._last_face = None
+        self._last_face_count = 0
+
         obs = encode_onehot(self.cube)
         info: dict = {}
         if self.use_action_mask:
@@ -324,6 +339,14 @@ class Rubik2x2Env(gym.Env):
         # move the cube
         self.cube = apply_move_idx(self.cube, action)
         self.steps += 1
+
+        # each face can be turned at most 3 times in a row
+        curr_face = action // 2
+        if self._last_face is not None and self._last_face == curr_face:
+            self._last_face_count += 1
+        else:
+            self._last_face = curr_face
+            self._last_face_count = 1
 
         # check if solved
         solved = is_solved(self.cube)

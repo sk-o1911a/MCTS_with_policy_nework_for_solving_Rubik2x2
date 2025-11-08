@@ -9,7 +9,7 @@ from Action_MTCS import pick_action_from_mcts
 def generate_self_play_data(
     model,
     num_episodes: int = 10,
-    max_episode_steps: int = 50,
+    max_episode_steps: int = 30,
     num_simulations: int = 200,
     scramble_len: int = 4,
     select_mode: str = "sample",

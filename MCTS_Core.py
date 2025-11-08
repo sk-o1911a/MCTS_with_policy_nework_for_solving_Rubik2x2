@@ -3,7 +3,7 @@ import torch
 from Rubik2x2Env import Rubik2x2Env, apply_move_idx, encode_onehot, is_solved
 
 class MCTSNode:
-    def __init__(self, cube, obs, action_mask=None, parent=None, prior=1.0):
+    def __init__(self, cube, obs, action_mask=None, parent=None, prior=1.0, last_face=None, repeat_count=0):
         self.cube = cube
         self.obs = obs
         self.action_mask = action_mask
@@ -16,6 +16,9 @@ class MCTSNode:
         self.W = 0.0
         self.Q = 0.0
 
+        self.last_face = last_face
+        self.repeat_count = repeat_count
+
     def is_leaf(self):
         return len(self.children) == 0
 
@@ -26,6 +29,7 @@ class MCTS:
         self.c_puct = c_puct
         self.num_simulations = num_simulations
         self.device = device
+        self.mask_env = Rubik2x2Env(scramble_len=0, max_steps=200, use_action_mask=True)
 
     def run(self, root_cube, root_obs, root_action_mask=None):
         root = MCTSNode(
@@ -33,7 +37,9 @@ class MCTS:
             obs=root_obs,
             action_mask=root_action_mask,
             parent=None,
-            prior=1.0
+            prior=1.0,
+            last_face=None,
+            repeat_count=0,
         )
 
         for _ in range(self.num_simulations):
@@ -94,18 +100,28 @@ class MCTS:
             new_cube = apply_move_idx(node.cube, action)
             new_obs = encode_onehot(new_cube)
 
-            mask = np.ones(self.num_actions, dtype=bool)
-            inv = Rubik2x2Env._inverse_move_idx(action)
-            if 0 <= inv < self.num_actions:
-                mask[inv] = False
-            new_mask = mask
+            curr_face = action // 2
+            if node.last_face is not None and node.last_face == curr_face:
+                new_repeat = node.repeat_count + 1
+            else:
+                new_repeat = 1
+
+            self.mask_env.cube = new_cube.copy()
+            self.mask_env.steps = 0
+            self.mask_env._last_action = action
+            self.mask_env._last_face = curr_face
+            self.mask_env._last_face_count = new_repeat
+
+            mask = self.mask_env._legal_action_mask()
 
             child = MCTSNode(
                 cube=new_cube,
                 obs=new_obs,
-                action_mask=new_mask,
+                action_mask=mask,
                 parent=node,
-                prior=policy[action]
+                prior=policy[action],
+                last_face = curr_face,
+                repeat_count = new_repeat
             )
             node.children[action] = child
 

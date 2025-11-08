@@ -11,6 +11,7 @@ from Rubik2x2Env import (
 )
 from Policy_Value_Net import PolicyValueNet
 from MCTS_Core import MCTS
+from Action_MTCS import pick_action_from_mcts
 
 pygame.init()
 
@@ -144,7 +145,7 @@ def solve_with_mcts(env, model, device="cpu", num_simulations=200, max_steps=25)
             break
 
         visit_counts = mcts.run(temp_env.cube, obs, action_mask)
-        act = int(visit_counts.argmax())
+        act = pick_action_from_mcts(visit_counts, mode="greedy", temperature=1.0)
 
         obs, _, terminated, truncated, info = temp_env.step(act)
         action_mask = info.get("action_mask", None)
@@ -200,14 +201,22 @@ def main():
             bx += 70
 
     def do_scramble():
+        nonlocal solve_formula, solve_moves, play_solve
         k = input_scramble.get_value(default=4)
         env.scramble_len = k
         env.reset()
+        solve_formula = ""
+        solve_moves = []
+        play_solve = False
     buttons.append(Button(30, 350, 80, 30, "Scram", do_scramble))
 
     def do_reset():
+        nonlocal solve_formula, solve_moves, play_solve
         env.cube = solved_cube()
         env.steps = 0
+        solve_formula = ""
+        solve_moves = []
+        play_solve = False
     buttons.append(Button(120, 350, 80, 30, "Reset", do_reset))
 
     solve_moves = []
