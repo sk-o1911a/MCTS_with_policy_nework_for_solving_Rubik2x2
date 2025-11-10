@@ -72,8 +72,14 @@ def generate_self_play_data(
 
         if solved:
             solved_count += 1
+            steps_used = step + 1
 
-        z = 1.0 if solved else -1.0
+            z = 1.0 - 0.03 * steps_used
+            if z < 0.2:
+                z = 0.2
+        else:
+            z = -1.0
+
         for s, pi in zip(episode_states, episode_pis):
             dataset.append((s, pi, z))
 

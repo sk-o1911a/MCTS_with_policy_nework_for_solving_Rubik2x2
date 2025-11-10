@@ -1,6 +1,5 @@
 import os
 import torch
-from sympy.physics.units import temperature
 
 from Policy_Value_Net import PolicyValueNet
 from Self_Play import generate_self_play_data
@@ -32,9 +31,9 @@ def load_or_create_model(device=DEVICE):
 def get_temperature(scramble_len: int) -> float:
     if scramble_len <= 4:
         return 1.0
-    elif scramble_len <= 7:
-        return 0.7
-    elif scramble_len <= 9:
+    elif scramble_len <= 6:
+        return 0.6
+    elif scramble_len <= 8:
         return 0.4
     else:
         return 0.3
@@ -48,11 +47,11 @@ def main():
 
     for it in range(1, NUM_ITERS + 1):
         if SCRAMBLE_LEN <= 3:
-            SIMULATIONS = 300
+            SIMULATIONS = 200
         elif SCRAMBLE_LEN <= 6:
-            SIMULATIONS = 400
-        else:
             SIMULATIONS = 500
+        else:
+            SIMULATIONS = 600
 
         temperature = get_temperature(SCRAMBLE_LEN)
 
