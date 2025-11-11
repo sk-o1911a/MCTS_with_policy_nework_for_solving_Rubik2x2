@@ -11,7 +11,7 @@ from Rubik2x2Env import (
 )
 from Policy_Value_Net import PolicyValueNet
 from MCTS_Core import MCTS
-from Action_MTCS import pick_action_from_mcts
+from Action_MCTS import pick_action_from_mcts
 
 pygame.init()
 

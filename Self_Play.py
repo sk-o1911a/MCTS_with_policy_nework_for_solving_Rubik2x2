@@ -3,7 +3,7 @@ import torch
 
 from Rubik2x2Env import Rubik2x2Env
 from MCTS_Core import MCTS
-from Action_MTCS import pick_action_from_mcts
+from Action_MCTS import pick_action_from_mcts
 
 
 def generate_self_play_data(

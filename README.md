@@ -27,7 +27,7 @@ This project implements an AI agent that learns to solve a 2x2 Rubik's Cube usin
 ├── Rubik2x2Env.py          # Gymnasium environment for 2x2 Rubik's Cube
 ├── Policy_Value_Net.py     # Neural network architecture (policy + value heads)
 ├── MCTS_Core.py            # Monte Carlo Tree Search implementation
-├── Action_MTCS.py          # Action selection strategies (greedy/sampling)
+├── Action_MCTS.py          # Action selection strategies (greedy/sampling)
 ├── Self_Play.py            # Self-play data generation
 ├── Train_Network.py        # Training loop with AlphaZero loss
 ├── main.py                 # Main training script with curriculum learning

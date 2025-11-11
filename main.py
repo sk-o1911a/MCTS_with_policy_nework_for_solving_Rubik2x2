@@ -39,91 +39,90 @@ def get_temperature(scramble_len: int) -> float:
     else:
         return 0.2
 
-def main():
-    device = DEVICE
-    model = load_or_create_model(device)
 
-    logger = MetricsLogger(log_dir=LOG_DIR)
-    logger.load_json()
+device = DEVICE
+model = load_or_create_model(device)
+
+logger = MetricsLogger(log_dir=LOG_DIR)
+logger.load_json()
 
 
-    SCRAMBLE_LEN = 1
-    recent_solve_rates: list[float] = []
+SCRAMBLE_LEN = 1
+recent_solve_rates: list[float] = []
 
-    for it in range(1, NUM_ITERS + 1):
-        if SCRAMBLE_LEN <= 3:
-            SIMULATIONS = 300
-        elif SCRAMBLE_LEN <= 6:
-            SIMULATIONS = 700
+for it in range(1, NUM_ITERS + 1):
+    if SCRAMBLE_LEN <= 3:
+        SIMULATIONS = 300
+    elif SCRAMBLE_LEN <= 6:
+        SIMULATIONS = 700
+    else:
+        SIMULATIONS = 900
+
+    temperature = get_temperature(SCRAMBLE_LEN)
+
+    print(f"\n=== Iteration {it}/{NUM_ITERS} (scramble_len={SCRAMBLE_LEN}, sims={SIMULATIONS}), current temp={temperature} ===")
+
+    dataset, solve_rate = generate_self_play_data(
+        model=model,
+        num_episodes=EPISODES_PER_ITER,
+        max_episode_steps=25,
+        num_simulations=SIMULATIONS,
+        scramble_len=SCRAMBLE_LEN,
+        select_mode="sample",
+        temperature=temperature,
+        device=device,
+    )
+    print(f"[main] self-play collected {len(dataset)} samples.")
+
+    recent_solve_rates.append(solve_rate)
+    if len(recent_solve_rates) > 8:
+        recent_solve_rates.pop(0)
+
+    model, loss, policy_loss, value_loss = train_on_selfplay_data(
+        model,
+        dataset,
+        batch_size=BATCH_SIZE,
+        epochs=EPOCHS,
+        lr=LR,
+        device=device,
+    )
+
+    logger.log_iteration(
+        iteration=it,
+        loss=loss,
+        policy_loss=policy_loss,
+        value_loss=value_loss,
+        solve_rate=solve_rate,
+        scramble_len=SCRAMBLE_LEN,
+        num_samples=len(dataset)
+    )
+
+    torch.save(model.state_dict(), CHECKPOINT_PATH)
+    print(f"[main] saved checkpoint to {CHECKPOINT_PATH}")
+    model.eval()
+
+    if len(recent_solve_rates) == 8:
+        avg_solve = sum(recent_solve_rates) / 8.0
+        print(f"[main] avg_solve(last 8) = {avg_solve * 100:.1f}%")
+        if avg_solve > SOLVE_THRESHOLD + 0.03 and SCRAMBLE_LEN <= 4:
+            SCRAMBLE_LEN += 1
+            recent_solve_rates.clear()
+            print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
+        elif avg_solve > SOLVE_THRESHOLD and 4 < SCRAMBLE_LEN < 10:
+            SCRAMBLE_LEN += 1
+            recent_solve_rates.clear()
+            print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
         else:
-            SIMULATIONS = 900
+            print("[main] stay at current scramble_len")
 
-        temperature = get_temperature(SCRAMBLE_LEN)
-
-        print(f"\n=== Iteration {it}/{NUM_ITERS} (scramble_len={SCRAMBLE_LEN}, sims={SIMULATIONS}), current temp={temperature} ===")
-
-        dataset, solve_rate = generate_self_play_data(
-            model=model,
-            num_episodes=EPISODES_PER_ITER,
-            max_episode_steps=25,
-            num_simulations=SIMULATIONS,
-            scramble_len=SCRAMBLE_LEN,
-            select_mode="sample",
-            temperature=temperature,
-            device=device,
-        )
-        print(f"[main] self-play collected {len(dataset)} samples.")
-
-        recent_solve_rates.append(solve_rate)
-        if len(recent_solve_rates) > 8:
-            recent_solve_rates.pop(0)
-
-        model, loss, policy_loss, value_loss = train_on_selfplay_data(
-            model,
-            dataset,
-            batch_size=BATCH_SIZE,
-            epochs=EPOCHS,
-            lr=LR,
-            device=device,
-        )
-
-        logger.log_iteration(
-            iteration=it,
-            loss=loss,
-            policy_loss=policy_loss,
-            value_loss=value_loss,
-            solve_rate=solve_rate,
-            scramble_len=SCRAMBLE_LEN,
-            num_samples=len(dataset)
-        )
-
-        torch.save(model.state_dict(), CHECKPOINT_PATH)
-        print(f"[main] saved checkpoint to {CHECKPOINT_PATH}")
-        model.eval()
-
-        if len(recent_solve_rates) == 8:
-            avg_solve = sum(recent_solve_rates) / 8.0
-            print(f"[main] avg_solve(last 8) = {avg_solve * 100:.1f}%")
-            if avg_solve > SOLVE_THRESHOLD + 0.03 and SCRAMBLE_LEN <= 4:
-                SCRAMBLE_LEN += 1
-                recent_solve_rates.clear()
-                print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
-            elif avg_solve > SOLVE_THRESHOLD and 4 < SCRAMBLE_LEN < 10:
-                SCRAMBLE_LEN += 1
-                recent_solve_rates.clear()
-                print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
-            else:
-                print("[main] stay at current scramble_len")
-
-
-        logger.save_json()
-        logger.plot_all(show=False)
-
-
-    print("\n[main] training loop finished.")
 
     logger.save_json()
-    logger.plot_all(show=True)
+    logger.plot_all(show=False)
 
-if __name__ == "__main__":
-    main()
+
+print("\n[main] training loop finished.")
+
+logger.save_json()
+logger.plot_all(show=True)
+
+
