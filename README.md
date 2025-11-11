@@ -5,7 +5,6 @@
 **Course:** Machine Learning  
 **Author:** Nguyen Quoc Khanh  
 **Student ID:** 42200211
-**School:** Ton Duc Thang University
 
 ---
 
