@@ -3,14 +3,15 @@
 ## Project Information
 
 **Course:** Machine Learning  
-**Author:** Nguyễn Quốc Khánh  
+**Author:** Nguyen Quoc Khanh  
 **Student ID:** 42200211
+** School: ** Ton Duc Thang University
 
 ---
 
 ## Overview
 
-This project implements an AI agent that learns to solve a 2x2 Rubik's Cube using reinforcement learning techniques inspired by AlphaZero. The system combines Monte Carlo Tree Search (MCTS) with a deep neural network to discover solving strategies through self-play, without any human knowledge or supervision.
+This project implements an AI agent that learns to solve a 2x2 Rubik's Cube using reinforcement learning techniques. The system combines Monte Carlo Tree Search (MCTS) with a deep neural network to discover solving strategies through self-play, without any human knowledge or supervision.
 
 ## Key Features
 
@@ -32,7 +33,9 @@ This project implements an AI agent that learns to solve a 2x2 Rubik's Cube usin
 ├── Train_Network.py        # Training loop with AlphaZero loss
 ├── main.py                 # Main training script with curriculum learning
 ├── test.py                 # Testing script for evaluating trained models
-└── PyGame.py               # Interactive GUI for playing and solving
+├── PyGame.py               # Interactive GUI for playing and solving
+├── Plot_Scatter.py         # Visualization of training progress
+└── training_logs           # Save training json logs and plot_scatter pictures 
 ```
 
 ## Technical Details
@@ -41,7 +44,7 @@ This project implements an AI agent that learns to solve a 2x2 Rubik's Cube usin
 
 - **State Space**: 6 faces × 2×2 tiles × 6 colors = 144-dimensional one-hot encoding
 - **Action Space**: 12 discrete actions (U, U', R, R', F, F', D, D', L, L', B, B')
-- **Reward Structure**: Binary (+1 for solved, -1 for unsolved)
+- **Reward Structure**: +1.0 - 0.05 * steps_used for solved, -1 for unsolved
 - **Termination**: Episode ends when cube is solved or max steps reached
 
 ### Neural Network Architecture
@@ -75,13 +78,13 @@ The agent uses curriculum learning with progressive difficulty:
 1. Start with 1-move scrambles
 2. Generate episodes using MCTS + neural network
 3. Train network on self-play data (policy + value loss)
-4. When solve rate exceeds 90% for 5 consecutive iterations, increase scramble length
-5. Repeat until reaching target difficulty (10+ moves)
+4. When solve rate exceeds 93% for first 4 moves or 90% for subsequent levels, increase scramble length by 1
+5. Repeat until reaching target difficulty (maximum 10 moves)
 
 **Hyperparameters:**
-- Episodes per iteration: 70
-- MCTS simulations: 300-500 (scales with difficulty)
-- Training epochs: 7
+- Episodes per iteration: 100
+- MCTS simulations: 300-900 (scales with difficulty)
+- Training epochs: 8
 - Batch size: 256
 - Learning rate: 1e-4
 - Exploration constant (c_puct): flexible based on scramble length from 1.0 to 0.3
@@ -97,8 +100,8 @@ The agent uses curriculum learning with progressive difficulty:
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd <project-folder>
+git clone https://github.com/sk-o1911a/MCTS_with_policy_nework_for_solving_Rubik2x2.git
+cd cd MCTS_with_policy_nework_for_solving_Rubik2x2
 
 # Install dependencies
 pip install -r requirements.txt
@@ -109,7 +112,6 @@ pip install -r requirements.txt
 - Gymnasium 1.2.1
 - NumPy 2.3.3
 - PyGame 2.6.1
-- TensorBoard 2.20.0 (for training visualization)
 - SymPy 1.13.1
 
 ## Usage
@@ -164,9 +166,9 @@ The agent successfully learns to solve increasingly complex scrambles through se
 
 | Scramble Length | Solve Rate | MCTS Simulations | Temperature |
 |-----------------|------------|------------------|-------------|
-| 1-3 moves       | ~98%+      | 300              | 1.0         |
-| 4-6 moves       | ~92%+      | 400              | 0.7-1.0     |
-| 7-10 moves      | ~85%+      | 500              | 0.3-0.7     |
+| 1-3 moves       | ~100%+     | 300              | 1.1         |
+| 4-6 moves       | ~99%+      | 700              | 0.6-1.1     |
+| 7-10 moves      | ~90%+      | 900              | 0.3-0.6     |
 
 
 The learned policy demonstrates intelligent move sequences and avoids redundant actions through action masking.
@@ -207,9 +209,9 @@ for iteration in range(NUM_ITERS):
     if SCRAMBLE_LEN <= 3:
         SIMULATIONS = 300
     elif SCRAMBLE_LEN <= 6:
-        SIMULATIONS = 400
+        SIMULATIONS = 700
     else:
-        SIMULATIONS = 500
+        SIMULATIONS = 900
     
     # 2. Adjust temperature based on difficulty
     temperature = get_temperature(SCRAMBLE_LEN)
@@ -226,9 +228,19 @@ for iteration in range(NUM_ITERS):
     recent_solve_rates.append(solve_rate)
     
     # 6. Adjust difficulty when agent masters current level
-    if avg(recent_solve_rates[-5:]) > 0.90:
+    if len(recent_solve_rates) == 8:
+    avg_solve = sum(recent_solve_rates) / 8.0
+    print(f"[main] avg_solve(last 8) = {avg_solve * 100:.1f}%")
+    if avg_solve > SOLVE_THRESHOLD + 0.03 and SCRAMBLE_LEN <= 4:
         SCRAMBLE_LEN += 1
         recent_solve_rates.clear()
+        print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
+    elif avg_solve > SOLVE_THRESHOLD and 4 < SCRAMBLE_LEN < 10:
+        SCRAMBLE_LEN += 1
+        recent_solve_rates.clear()
+        print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
+    else:
+        print("[main] stay at current scramble_len")
 ```
 ### Loss Function
 ```
@@ -237,7 +249,7 @@ Total Loss = MSE(value, target_value) + CrossEntropy(policy, target_policy)
 
 Where:
 - **Value Loss**: Measures accuracy of position evaluation
-- **Policy Loss**: Measures alignment between MCTS visit distribution and policy outpu
+- **Policy Loss**: Measures alignment between MCTS visit distribution and policy output
 
 ## References
 
