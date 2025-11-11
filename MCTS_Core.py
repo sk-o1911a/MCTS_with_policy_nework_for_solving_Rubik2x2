@@ -29,7 +29,7 @@ class MCTS:
         self.c_puct = c_puct
         self.num_simulations = num_simulations
         self.device = device
-        self.mask_env = Rubik2x2Env(scramble_len=0, max_steps=200, use_action_mask=True)
+        self.mask_env = Rubik2x2Env(scramble_len=0, max_steps=25, use_action_mask=True)
 
     def run(self, root_cube, root_obs, root_action_mask=None):
         root = MCTSNode(

@@ -9,7 +9,7 @@ from Action_MTCS import pick_action_from_mcts
 def generate_self_play_data(
     model,
     num_episodes: int = 10,
-    max_episode_steps: int = 30,
+    max_episode_steps: int = 25,
     num_simulations: int = 200,
     scramble_len: int = 4,
     select_mode: str = "sample",
@@ -74,7 +74,7 @@ def generate_self_play_data(
             solved_count += 1
             steps_used = step + 1
 
-            z = 1.0 - 0.03 * steps_used
+            z = 1.0 - 0.05 * steps_used
             if z < 0.2:
                 z = 0.2
         else:

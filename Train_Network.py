@@ -48,6 +48,10 @@ def train_on_selfplay_data(
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
+    final_loss = 0.0
+    final_pol_loss = 0.0
+    final_val_loss = 0.0
+
     for epoch in range(epochs):
         # trộn dữ liệu
         perm = torch.randperm(N, device=device)
@@ -79,6 +83,10 @@ def train_on_selfplay_data(
             total_val  += val_loss.item()
             nb += 1
 
+        final_loss = total_loss / nb
+        final_pol_loss = total_pol / nb
+        final_val_loss = total_val / nb
+
         print(
             f"[train] epoch {epoch+1}/{epochs} "
             f"loss={total_loss/nb:.4f} "
@@ -86,4 +94,4 @@ def train_on_selfplay_data(
             f"val={total_val/nb:.4f}"
         )
 
-    return model
+    return model, final_loss, final_pol_loss, final_val_loss

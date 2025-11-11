@@ -122,7 +122,7 @@ def draw_cube(surface, env):
 
 
 def solve_with_mcts(env, model, device="cpu", num_simulations=200, max_steps=25):
-    temp_env = Rubik2x2Env(scramble_len=1, max_steps=200, use_action_mask=True)
+    temp_env = Rubik2x2Env(scramble_len=1, max_steps=25, use_action_mask=True)
     temp_env.cube = env.cube.copy()
     temp_env.steps = 0
     temp_env._last_action = None
@@ -173,7 +173,7 @@ def main():
     except Exception as e:
         print("Không load được rubik_policy_value.pt:", e)
 
-    env = Rubik2x2Env(scramble_len=4, max_steps=200, use_action_mask=True)
+    env = Rubik2x2Env(scramble_len=4, max_steps=25, use_action_mask=True)
 
     input_scramble = InputBox(30, 300, 80, 30, text="4")
 
@@ -231,7 +231,7 @@ def main():
             model,
             device=device,
             num_simulations=200,
-            max_steps=50,
+            max_steps=25,
         )
         solve_moves = actions
         solve_formula = formula

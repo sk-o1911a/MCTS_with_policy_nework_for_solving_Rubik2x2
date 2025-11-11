@@ -4,18 +4,19 @@ import torch
 from Policy_Value_Net import PolicyValueNet
 from Self_Play import generate_self_play_data
 from Train_Network import train_on_selfplay_data
+from Plot_Scatter import MetricsLogger
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-NUM_ITERS = 300
-EPISODES_PER_ITER = 70
-EPOCHS = 7
+NUM_ITERS = 115
+EPISODES_PER_ITER = 100
+EPOCHS = 8
 BATCH_SIZE = 256
 LR = 1e-4
 SOLVE_THRESHOLD = 0.9
 CHECKPOINT_PATH = "rubik_policy_value.pt"
-
+LOG_DIR = "training_logs"
 
 def load_or_create_model(device=DEVICE):
     model = PolicyValueNet().to(device)
@@ -30,28 +31,32 @@ def load_or_create_model(device=DEVICE):
 
 def get_temperature(scramble_len: int) -> float:
     if scramble_len <= 4:
-        return 1.0
+        return 1.1
     elif scramble_len <= 6:
         return 0.6
     elif scramble_len <= 8:
-        return 0.4
-    else:
         return 0.3
+    else:
+        return 0.2
 
 def main():
     device = DEVICE
     model = load_or_create_model(device)
+
+    logger = MetricsLogger(log_dir=LOG_DIR)
+    logger.load_json()
+
 
     SCRAMBLE_LEN = 1
     recent_solve_rates: list[float] = []
 
     for it in range(1, NUM_ITERS + 1):
         if SCRAMBLE_LEN <= 3:
-            SIMULATIONS = 200
+            SIMULATIONS = 300
         elif SCRAMBLE_LEN <= 6:
-            SIMULATIONS = 500
+            SIMULATIONS = 700
         else:
-            SIMULATIONS = 600
+            SIMULATIONS = 900
 
         temperature = get_temperature(SCRAMBLE_LEN)
 
@@ -60,7 +65,7 @@ def main():
         dataset, solve_rate = generate_self_play_data(
             model=model,
             num_episodes=EPISODES_PER_ITER,
-            max_episode_steps=30,
+            max_episode_steps=25,
             num_simulations=SIMULATIONS,
             scramble_len=SCRAMBLE_LEN,
             select_mode="sample",
@@ -70,10 +75,10 @@ def main():
         print(f"[main] self-play collected {len(dataset)} samples.")
 
         recent_solve_rates.append(solve_rate)
-        if len(recent_solve_rates) > 5:
+        if len(recent_solve_rates) > 8:
             recent_solve_rates.pop(0)
 
-        model = train_on_selfplay_data(
+        model, loss, policy_loss, value_loss = train_on_selfplay_data(
             model,
             dataset,
             batch_size=BATCH_SIZE,
@@ -82,22 +87,43 @@ def main():
             device=device,
         )
 
+        logger.log_iteration(
+            iteration=it,
+            loss=loss,
+            policy_loss=policy_loss,
+            value_loss=value_loss,
+            solve_rate=solve_rate,
+            scramble_len=SCRAMBLE_LEN,
+            num_samples=len(dataset)
+        )
+
         torch.save(model.state_dict(), CHECKPOINT_PATH)
         print(f"[main] saved checkpoint to {CHECKPOINT_PATH}")
         model.eval()
 
-        if len(recent_solve_rates) == 5:
-            avg_solve = sum(recent_solve_rates) / 5.0
-            print(f"[main] avg_solve(last 5) = {avg_solve * 100:.1f}%")
-            if avg_solve >= SOLVE_THRESHOLD and SCRAMBLE_LEN < 10:
+        if len(recent_solve_rates) == 8:
+            avg_solve = sum(recent_solve_rates) / 8.0
+            print(f"[main] avg_solve(last 8) = {avg_solve * 100:.1f}%")
+            if avg_solve > SOLVE_THRESHOLD + 0.03 and SCRAMBLE_LEN <= 4:
+                SCRAMBLE_LEN += 1
+                recent_solve_rates.clear()
+                print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
+            elif avg_solve > SOLVE_THRESHOLD and 4 < SCRAMBLE_LEN < 10:
                 SCRAMBLE_LEN += 1
                 recent_solve_rates.clear()
                 print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
             else:
                 print("[main] stay at current scramble_len")
 
+
+        logger.save_json()
+        logger.plot_all(show=False)
+
+
     print("\n[main] training loop finished.")
 
+    logger.save_json()
+    logger.plot_all(show=True)
 
 if __name__ == "__main__":
     main()
