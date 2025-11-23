@@ -528,11 +528,21 @@ Main dependencies (from `requirements.txt`):
 > ```text
 > --extra-index-url https://download.pytorch.org/whl/nightly/cu128
 > ```
-> For stable wheels or older GPUs, you may need to adjust the `extra-index-url` and CUDA version accordingly.
+> For stable wheels or older GPUs, you may need to adjust the `extra-index-url` and CUDA version accordingly in requirements.txt.
 
 ### Setup
 
 ```bash
+# Create and activate a virtual environment (optional but recommended)
+
+# Windows
+python -m venv .venv
+.\.venv\Scripts\activate
+
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+
 # Clone the repository
 git clone https://github.com/sk-o1911a/MCTS_with_policy_nework_for_solving_Rubik2x2.git
 cd MCTS_with_policy_nework_for_solving_Rubik2x2
