@@ -230,13 +230,13 @@ def main():
             env,
             model,
             device=device,
-            num_simulations=200,
+            num_simulations=1000,
             max_steps=40,
         )
         solve_moves = actions
         solve_formula = formula
         play_solve = True
-        next_move_time = pygame.time.get_ticks() + 1000  # 1s sau bắt đầu xoay
+        next_move_time = pygame.time.get_ticks() + 150  # 1s sau bắt đầu xoay
     buttons.append(Button(210, 350, 80, 30, "Solve", do_solve))
 
     running = True

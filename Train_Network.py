@@ -14,7 +14,7 @@ def alphazero_loss(policy_logits, value_pred, target_pi, target_v):
     log_prob = F.log_softmax(policy_logits, dim=-1)
     policy_loss = -(target_pi * log_prob).sum(dim=-1).mean()
 
-    loss = value_loss + policy_loss
+    loss = 1 * value_loss + 1.2 * policy_loss
     return loss, policy_loss, value_loss
 
 def dataset_to_tensors(dataset, device):

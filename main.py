@@ -6,15 +6,17 @@ from Policy_Value_Net import PolicyValueNet
 from Self_Play import generate_self_play_data
 from Train_Network import train_on_selfplay_data
 from Plot_Scatter import MetricsLogger
+from evaluate import ScrambleEvaluator
+
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-NUM_ITERS = 150
-EPISODES_PER_ITER = 100
-EPOCHS = 8
+NUM_ITERS = 100
+EPISODES_PER_ITER = 80
+EPOCHS = 10
 BATCH_SIZE = 256
-LR = 1e-4
+LR = 2e-4
 SOLVE_THRESHOLD = 0.9
 CHECKPOINT_PATH = "rubik_policy_value.pt"
 LOG_DIR = "training_logs"
@@ -36,12 +38,12 @@ def load_or_create_model(device=DEVICE):
     return model
 
 def get_temperature(scramble_len: int) -> float:
-    if scramble_len <= 4:
-        return 1.1
-    elif scramble_len <= 6:
-        return 0.6
-    elif scramble_len <= 8:
-        return 0.3
+    if scramble_len <= 5:
+        return 1
+    elif scramble_len <= 9:
+        return 0.7
+    elif scramble_len <= 11:
+        return 0.4
     else:
         return 0.2
 
@@ -50,18 +52,19 @@ device = DEVICE
 model = load_or_create_model(device)
 logger = MetricsLogger(log_dir=LOG_DIR)
 logger.load_json()
+evaluator = ScrambleEvaluator()
 
 
-SCRAMBLE_LEN = 1
+SCRAMBLE_LEN = 3
 recent_solve_rates: list[float] = []
 
 for it in range(1, NUM_ITERS + 1):
     if SCRAMBLE_LEN <= 3:
         SIMULATIONS = 300
-    elif SCRAMBLE_LEN <= 6:
-        SIMULATIONS = 700
+    elif SCRAMBLE_LEN <= 7:
+        SIMULATIONS = 600
     else:
-        SIMULATIONS = 900
+        SIMULATIONS = 800
 
     temperature = get_temperature(SCRAMBLE_LEN)
 
@@ -118,11 +121,11 @@ for it in range(1, NUM_ITERS + 1):
     if len(recent_solve_rates) == 8:
         avg_solve = sum(recent_solve_rates) / 8.0
         print(f"[main] avg_solve(last 8) = {avg_solve * 100:.1f}%")
-        if avg_solve > SOLVE_THRESHOLD + 0.03 and SCRAMBLE_LEN <= 4:
-            SCRAMBLE_LEN += 1
+        if avg_solve > SOLVE_THRESHOLD and SCRAMBLE_LEN <= 9:
+            SCRAMBLE_LEN += 2
             recent_solve_rates.clear()
             print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
-        elif avg_solve > SOLVE_THRESHOLD and 4 < SCRAMBLE_LEN < 10:
+        elif avg_solve > SOLVE_THRESHOLD and 9 < SCRAMBLE_LEN <= 15:
             SCRAMBLE_LEN += 1
             recent_solve_rates.clear()
             print(f"[main] unlock next scramble_len = {SCRAMBLE_LEN}")
@@ -137,6 +140,7 @@ for it in range(1, NUM_ITERS + 1):
 print("\n[main] training loop finished.")
 
 logger.save_json()
+evaluator.evaluate_scramble_range()
 logger.plot_all(show=True)
-
+evaluator.plot_scramble_results()
 

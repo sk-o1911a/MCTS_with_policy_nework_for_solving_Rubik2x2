@@ -3,7 +3,7 @@ import torch
 from Rubik2x2Env import Rubik2x2Env
 from Policy_Value_Net import PolicyValueNet
 from MCTS_Core import MCTS
-from Action_MTCS import pick_action_from_mcts
+from Action_MCTS import pick_action_from_mcts
 
 
 def load_model(path: str, device: str):
@@ -14,7 +14,7 @@ def load_model(path: str, device: str):
     return model
 
 
-def run_one_episode(model, device="cpu", scramble_len=15,
+def run_one_episode(model, device="cpu", scramble_len=11,
                     num_simulations=200, max_steps=50):
 
     env = Rubik2x2Env(scramble_len=scramble_len, use_action_mask=True)

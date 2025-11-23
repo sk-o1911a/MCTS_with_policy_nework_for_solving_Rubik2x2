@@ -23,7 +23,7 @@ class MCTSNode:
         return len(self.children) == 0
 
 class MCTS:
-    def __init__(self, model, num_actions=12, c_puct=1.5, num_simulations=200, device="cpu"):
+    def __init__(self, model, num_actions=12, c_puct=1.3, num_simulations=200, device="cpu"):
         self.model = model
         self.num_actions = num_actions
         self.c_puct = c_puct

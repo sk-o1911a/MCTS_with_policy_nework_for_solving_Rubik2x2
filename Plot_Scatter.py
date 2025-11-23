@@ -115,6 +115,7 @@ class MetricsLogger:
         plt.tight_layout()
         plt.savefig(filepath, dpi=150, bbox_inches='tight')
 
+
         if show:
             plt.show()
         plt.close()
