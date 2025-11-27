@@ -156,7 +156,38 @@ def solve_with_mcts(env, model, device="cpu", num_simulations=200, max_steps=40)
         if terminated:
             break
 
-    formula = " ".join(names)
+    def compress_formula(move_names):
+        """
+        Compress consecutive identical moves into compact notation.
+        Examples:
+            ["R", "R"] -> "R2"
+            ["U", "U", "U"] -> "U3" or "U'"
+            ["R'", "R'"] -> "R'2" or "R2'"
+        """
+        if not move_names:
+            return ""
+
+        compressed = []
+        i = 0
+
+        while i < len(move_names):
+            current_move = move_names[i]
+            count = 1
+
+            # Count consecutive identical moves
+            while i + count < len(move_names) and move_names[i + count] == current_move:
+                count += 1
+
+            # Handle different counts
+            if count == 1:
+                compressed.append(current_move)
+            elif count == 2:
+                compressed.append(f"2{current_move}")
+            i += count
+
+        return " ".join(compressed)
+
+    formula = compress_formula(names)
     return actions, formula
 
 
