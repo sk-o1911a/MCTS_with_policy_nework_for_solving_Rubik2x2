@@ -520,15 +520,14 @@ Main dependencies (from `requirements.txt`):
 > This project uses the PyTorch **nightly** CUDA 12.4 wheels via:
 >
 > ```text
-> --extra-index-url https://download.pytorch.org/whl/cu124
+> pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 > ```
 > 
 > If you have an NVIDIA RTX 5000 series or newer GPU, install with:
 > 
 > ```text
-> --extra-index-url https://download.pytorch.org/whl/nightly/cu128
+> pip3 install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu128
 > ```
-> For stable wheels or older GPUs, you may need to adjust the `extra-index-url` and CUDA version accordingly in requirements.txt.
 
 ### Setup
 
